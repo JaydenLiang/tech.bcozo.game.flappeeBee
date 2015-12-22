@@ -11,13 +11,16 @@ import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.scenes.scene2d.Group;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+
+import tech.bcozo.game.tools.storage.GameStorage;
+import tech.bcozo.game.tools.ui.DigitDisplay;
 
 /**
  * <p>
@@ -30,24 +33,26 @@ import com.badlogic.gdx.utils.viewport.Viewport;
  * @date Dec 15, 2015 11:58:42 PM
  */
 public class GameScreen extends ScreenAdapter {
-    private static final float WORLD_WIDTH = 480;
-    private static final float WORLD_HEIGHT = 640;
     private static final float GAP_BETWEEN_FLOWERS = 200f;
     private static final float GAME_SPEED = 100f;
     private static final float CROSSING_ZONE_HEIGHT = 225f;
-    private ShapeRenderer shapeRenderer;
     private Viewport viewport;
     private Camera camera;
-    private SpriteBatch batch;
-
+    private Stage stage;
     private Bee flappee;
     private ArrayList<Flower> flowers = new ArrayList<Flower>();
     private int score;
+    private int highScore;
     private GAME_STATE state;
     private Texture background;
     private Texture flowerBottom;
     private Texture flowerTop;
     private Texture beeTexture;
+    private DigitDisplay scoreText;
+    private DigitDisplay highScoreText;
+
+    private Group flowerGroup;
+    private Group scoreGroup;
 
     /**
      * <p>
@@ -55,18 +60,64 @@ public class GameScreen extends ScreenAdapter {
      * </p>
      */
     public GameScreen() {
-        camera = new OrthographicCamera();
-        viewport = new FitViewport(WORLD_WIDTH, WORLD_HEIGHT, camera);
-        shapeRenderer = new ShapeRenderer();
-        batch = new SpriteBatch();
+        viewport = new FitViewport(GameConfig.WORLD_WIDTH,
+                GameConfig.WORLD_HEIGHT);
+        stage = new Stage(viewport);
+        Gdx.input.setInputProcessor(stage);
         flowers = new ArrayList<>();
         score = 0;
+        highScore = 0;
         state = GAME_STATE.PLAYING;
-        background = new Texture(Gdx.files.internal("background01.png"));
+        background = new Texture(Gdx.files.internal("background02.png"));
+        stage.addActor(new Image(background));
+        flowerGroup = new Group();
+        scoreGroup = new Group();
+        stage.addActor(flowerGroup);
+        stage.addActor(scoreGroup);
+
         flowerBottom = new Texture(Gdx.files.internal("flower01.png"));
         flowerTop = new Texture(Gdx.files.internal("flower02.png"));
         beeTexture = new Texture(Gdx.files.internal("bee.fly.serial02.png"));
         flappee = new Bee(beeTexture);
+
+        stage.addActor(flappee);
+        scoreText = new DigitDisplay("digits02.png", "digits02.txt");
+        highScoreText = new DigitDisplay("digits02.png", "digits02.txt");
+        scoreGroup.addActor(scoreText);
+        scoreGroup.addActor(highScoreText);
+    }
+
+    @Override
+    public void dispose() {
+        Gdx.input.setInputProcessor(null);
+        // clear every clearable variables
+        flappee.clear();
+        flowers.clear();
+        flowerGroup.clear();
+        scoreGroup.clear();
+        // dispose every disposable variables
+        stage.dispose();
+        background.dispose();
+        flowerBottom.dispose();
+        flowerTop.dispose();
+        beeTexture.dispose();
+        scoreText.dispose();
+        highScoreText.dispose();
+        // unlink all reference
+        stage = null;
+        camera = null;
+        viewport = null;
+        flappee = null;
+        flowers = null;
+        flowerGroup = null;
+        scoreGroup = null;
+        background = null;
+        flowerBottom = null;
+        flowerTop = null;
+        beeTexture = null;
+        scoreText = null;
+        highScoreText = null;
+        super.dispose();
     }
 
     @Override
@@ -76,9 +127,23 @@ public class GameScreen extends ScreenAdapter {
 
     @Override
     public void show() {
-        camera.position.set(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, 0);
-        camera.update();
-        flappee.setPosition(WORLD_WIDTH / 4, WORLD_HEIGHT / 2);
+        flappee.setPosition(GameConfig.WORLD_WIDTH / 4,
+                GameConfig.WORLD_HEIGHT / 2);
+        scoreText.setPosition(5,
+                GameConfig.WORLD_HEIGHT - scoreText.getHeight() - 5);
+        scoreText.setDisplayFormat(0, 10, 0, 0);
+        scoreText.setNumber(0);
+
+        String highScoreString = GameStorage.getInstanceOf("FlappeeBee")
+                .getValue("highScore");
+        if (highScoreString != "")
+            highScore = Integer.parseInt(highScoreString);
+
+        highScoreText.setDisplayFormat(10, 10, 0, 0);
+        highScoreText.setNumber(highScore);
+        highScoreText.setPosition(
+                (GameConfig.WORLD_WIDTH - highScoreText.getWidth()) / 2,
+                GameConfig.WORLD_HEIGHT - scoreText.getHeight() - 5);
     }
 
     private void clearScreen() {
@@ -91,78 +156,54 @@ public class GameScreen extends ScreenAdapter {
     public void render(float delta) {
         switch (state) {
         case PLAYING:
-            update(delta);
+            if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+                flappee.flap();
+            }
+            stage.act(delta);
+            checkIfNewFlowerIsNeeded();
+            removeFlowersIfPassed();
+            if (checkForCollision()) {
+                gameOver();
+            }
+            updateScore(MathUtils.roundPositive(delta * 100));
             break;
         case GAME_OVER:
-            onFlappeeDie(delta);
+            stage.act(delta);
+            if (flappee.getY() <= flappee.getHeight()) {
+                if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+                    restart();
+                }
+            }
+            break;
+        case RESTARTING:
+            restarting();
             break;
         default:
             break;
         }
-        clearScreen();
-        draw();
-    }
-
-    private void draw() {
-        batch.setProjectionMatrix(camera.projection);
-        batch.setTransformMatrix(camera.view);
-        batch.begin();
-        batch.draw(background, 0, 0);
-        drawFlowers();
-        flappee.draw(batch);
-        batch.end();
-    }
-
-    private void drawDebug() {
-        shapeRenderer.setProjectionMatrix(camera.projection);
-        shapeRenderer.setTransformMatrix(camera.view);
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-        flappee.drawDebug(shapeRenderer);
-        for (Flower flower : flowers) {
-            flower.drawDebug(shapeRenderer);
-        }
-        shapeRenderer.end();
-    }
-
-    private void update(float delta) {
-        updateFlappee(delta);
-        updateFlowers(delta);
-        if (checkForCollision()) {
-            gameOver();
-        }
-    }
-
-    private void updateFlowers(float delta) {
-        float flyDistance = GAME_SPEED * delta;
-        for (Flower flower : flowers) {
-            flower.update(flyDistance);
-        }
-        checkIfNewFlowerIsNeeded();
-        removeFlowersIfPassed();
-    }
-
-    private void updateFlappee(float delta) {
-        flappee.update(delta);
-        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE))
-            flappee.flap();
         blockFlappeeLeavingTheWorld();
+        clearScreen();
+        stage.draw();
     }
 
     private void blockFlappeeLeavingTheWorld() {
-        flappee.setPosition(flappee.getX(), MathUtils.clamp(flappee.getY(),
-                0 + flappee.getRadius(), WORLD_HEIGHT - flappee.getRadius()));
+        flappee.setPosition(flappee.getX(),
+                MathUtils.clamp(flappee.getY(), 0 + flappee.getRadius(),
+                        GameConfig.WORLD_HEIGHT - flappee.getRadius()));
     }
 
     private void createNewFlower() {
         Flower newFlower = new Flower(CROSSING_ZONE_HEIGHT, flowerBottom,
                 flowerTop);
-        newFlower.setPosition(WORLD_WIDTH + Flower.WIDTH);
+        newFlower.setPosition(GameConfig.WORLD_WIDTH + Flower.WIDTH);
+        newFlower.setMoveSpeed(GAME_SPEED);
         flowers.add(newFlower);
+        flowerGroup.addActor(newFlower);
     }
 
-    private void drawFlowers() {
+    private void updateFlowerMoveSpeed(float moveSpeed) {
         for (Flower flower : flowers) {
-            flower.draw(batch);
+            flower.setMoveSpeed(moveSpeed);
         }
     }
 
@@ -172,7 +213,7 @@ public class GameScreen extends ScreenAdapter {
         } else {
             Flower flower = flowers.get(flowers.size() - 1);// get the last
                                                             // flower
-            if (flower.getX() < WORLD_WIDTH - GAP_BETWEEN_FLOWERS) {
+            if (flower.getX() < GameConfig.WORLD_WIDTH - GAP_BETWEEN_FLOWERS) {
                 createNewFlower();
             }
         }
@@ -196,25 +237,40 @@ public class GameScreen extends ScreenAdapter {
         return false;
     }
 
+    private void updateScore(int addScore) {
+        score += addScore;
+        scoreText.setNumber(score);
+        if (score > highScore) {
+            highScore = score;
+            highScoreText.setNumber(highScore);
+        }
+    }
+
     private void gameOver() {
         state = GAME_STATE.GAME_OVER;
+        updateFlowerMoveSpeed(0);
         flappee.die();
     }
 
     private void restart() {
-        flappee.setPosition(WORLD_WIDTH / 4, WORLD_HEIGHT / 2);
         flowers.clear();
+        flowerGroup.clearChildren();
         score = 0;
-        state = GAME_STATE.PLAYING;
+        state = GAME_STATE.RESTARTING;
+    }
+
+    private void restarting() {
+        if (flappee.getY() < GameConfig.WORLD_HEIGHT / 2) {
+            flappee.flap();
+        } else {
+            GameStorage.getInstanceOf("FlappeeBee").setValue("highScore",
+                    String.valueOf(highScore));
+            show();
+            state = GAME_STATE.PLAYING;
+        }
     }
 
     private enum GAME_STATE {
-        STOP, PLAYING, PAUSE, GAME_OVER
-    }
-
-    private void onFlappeeDie(float delta) {
-        if (flappee.getY() - flappee.getRadius() > 0) {
-            flappee.update(delta);
-        }
+        STOP, PLAYING, PAUSE, GAME_OVER, RESTARTING
     }
 }

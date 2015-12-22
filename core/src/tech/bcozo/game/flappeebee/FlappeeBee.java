@@ -8,8 +8,12 @@ public class FlappeeBee extends Game {
     SpriteBatch batch;
     Texture img;
 
+    public FlappeeBee() {
+    }
+
     @Override
     public void create() {
-        setScreen(new GameScreen());
+        setScreen(new StartScreen(this));
+        // setScreen(new GameScreen());
     }
 }

@@ -4,12 +4,13 @@
 package tech.bcozo.game.flappeebee;
 
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Circle;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 
 /**
  * <p>
@@ -21,23 +22,24 @@ import com.badlogic.gdx.math.Rectangle;
  * @version 1.0
  * @date Dec 18, 2015 11:13:07 PM
  */
-public class Flower {
+public class Flower extends Actor {
     private static final float COLLISION_RECTANGLE_WIDTH = 13f;
     private static final float COLLISION_RECTANGLE_HEIGHT = 447f;
     private static final float COLLISION_CIRCLE_RADIUS = 35f;
     public static final float WIDTH = COLLISION_CIRCLE_RADIUS * 2;
     private static final float HEIGHT_OFFSET = -400f;
-    private final Circle floorCollisionCircle;
-    private final Rectangle floorCollisionRectangle;
-    private final Circle ceilingCollisionCircle;
-    private final Rectangle ceilingCollisionRectangle;
-    private final Texture floorTexture;
-    private final Texture ceilingTexture;
+    private Circle floorCollisionCircle;
+    private Rectangle floorCollisionRectangle;
+    private Circle ceilingCollisionCircle;
+    private Rectangle ceilingCollisionRectangle;
+    private Texture floorTexture;
+    private Texture ceilingTexture;
 
     private float x;
     private float y;
     private float textureOffsetX;
     private float textureOffsetY;
+    private float moveSpeed;
 
     /**
      * <p>
@@ -49,6 +51,7 @@ public class Flower {
         float zoneHeight = crossingZoneHeight;
         x = 0;
         y = 0;
+        moveSpeed = 0;
         this.floorTexture = floorTexture;
         this.ceilingTexture = ceilingTexture;
         this.y = MathUtils.random(HEIGHT_OFFSET);
@@ -68,10 +71,25 @@ public class Flower {
         textureOffsetY = COLLISION_CIRCLE_RADIUS;
     }
 
+    @Override
+    public void clear() {
+        floorTexture.dispose();
+        ceilingTexture.dispose();
+        floorCollisionCircle = null;
+        floorCollisionRectangle = null;
+        ceilingCollisionCircle = null;
+        ceilingCollisionRectangle = null;
+        floorTexture = null;
+        ceilingTexture = null;
+        super.clear();
+    }
+
+    @Override
     public float getX() {
         return x;
     }
 
+    @Override
     public float getY() {
         return y;
     }
@@ -92,15 +110,18 @@ public class Flower {
         ceilingCollisionRectangle.setX(x);
     }
 
-    public void draw(SpriteBatch batch) {
+    @Override
+    public void draw(Batch batch, float parentAlpha) {
         batch.draw(floorTexture,
                 floorCollisionRectangle.getX() - textureOffsetX,
                 floorCollisionRectangle.getY() + textureOffsetY);
         batch.draw(ceilingTexture,
                 ceilingCollisionRectangle.getX() - textureOffsetX,
                 ceilingCollisionRectangle.getY() - textureOffsetY);
+        super.draw(batch, parentAlpha);
     }
 
+    @Override
     public void drawDebug(ShapeRenderer shapeRenderer) {
         shapeRenderer.circle(floorCollisionCircle.x, floorCollisionCircle.y,
                 floorCollisionCircle.radius);
@@ -113,8 +134,18 @@ public class Flower {
                 ceilingCollisionRectangle.height);
     }
 
-    public void update(float moveX) {
-        setPosition(x - moveX);
+    public void setMoveSpeed(float moveSpeed) {
+        this.moveSpeed = moveSpeed;
+    }
+
+    public float getMoveSpeed() {
+        return moveSpeed;
+    }
+
+    @Override
+    public void act(float delta) {
+        setPosition(x - moveSpeed * delta);
+        super.act(delta);
     }
 
     public boolean isFlappeeColliding(Bee flappee) {
