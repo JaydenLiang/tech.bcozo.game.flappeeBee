@@ -48,11 +48,17 @@ public class GameScreen extends ScreenAdapter {
     private Texture flowerBottom;
     private Texture flowerTop;
     private Texture beeTexture;
+    private Texture gameOverTexture;
     private DigitDisplay scoreText;
     private DigitDisplay highScoreText;
 
+    private Image backgroundImage;
+    private Image gameOverImage;
+
+    private Group backgroundGroup;
     private Group flowerGroup;
     private Group scoreGroup;
+    private Group gameOverGroup;
 
     /**
      * <p>
@@ -64,20 +70,28 @@ public class GameScreen extends ScreenAdapter {
                 GameConfig.WORLD_HEIGHT);
         stage = new Stage(viewport);
         Gdx.input.setInputProcessor(stage);
-        flowers = new ArrayList<>();
+        flowers = new ArrayList<Flower>();
         score = 0;
         highScore = 0;
         state = GAME_STATE.PLAYING;
-        background = new Texture(Gdx.files.internal("background02.png"));
-        stage.addActor(new Image(background));
+        backgroundGroup = new Group();
         flowerGroup = new Group();
         scoreGroup = new Group();
+        gameOverGroup = new Group();
+        background = new Texture(Gdx.files.internal("background02.png"));
+        backgroundImage = new Image(background);
+        stage.addActor(backgroundGroup);
         stage.addActor(flowerGroup);
         stage.addActor(scoreGroup);
+
+        backgroundGroup.addActor(backgroundImage);
 
         flowerBottom = new Texture(Gdx.files.internal("flower01.png"));
         flowerTop = new Texture(Gdx.files.internal("flower02.png"));
         beeTexture = new Texture(Gdx.files.internal("bee.fly.serial02.png"));
+        gameOverTexture = new Texture(Gdx.files.internal("textGameOver.png"));
+        gameOverImage = new Image(gameOverTexture);
+
         flappee = new Bee(beeTexture);
 
         stage.addActor(flappee);
@@ -85,6 +99,8 @@ public class GameScreen extends ScreenAdapter {
         highScoreText = new DigitDisplay("digits02.png", "digits02.txt");
         scoreGroup.addActor(scoreText);
         scoreGroup.addActor(highScoreText);
+
+        stage.addActor(gameOverGroup);
     }
 
     @Override
@@ -93,13 +109,18 @@ public class GameScreen extends ScreenAdapter {
         // clear every clearable variables
         flappee.clear();
         flowers.clear();
+        backgroundGroup.clear();
         flowerGroup.clear();
         scoreGroup.clear();
+        gameOverGroup.clear();
+        backgroundImage.clear();
+        gameOverImage.clear();
         // dispose every disposable variables
         stage.dispose();
         background.dispose();
         flowerBottom.dispose();
         flowerTop.dispose();
+        gameOverTexture.dispose();
         beeTexture.dispose();
         scoreText.dispose();
         highScoreText.dispose();
@@ -109,11 +130,16 @@ public class GameScreen extends ScreenAdapter {
         viewport = null;
         flappee = null;
         flowers = null;
+        backgroundGroup = null;
         flowerGroup = null;
         scoreGroup = null;
+        gameOverGroup = null;
         background = null;
+        backgroundImage = null;
+        gameOverImage = null;
         flowerBottom = null;
         flowerTop = null;
+        gameOverTexture = null;
         beeTexture = null;
         scoreText = null;
         highScoreText = null;
@@ -144,6 +170,11 @@ public class GameScreen extends ScreenAdapter {
         highScoreText.setPosition(
                 (GameConfig.WORLD_WIDTH - highScoreText.getWidth()) / 2,
                 GameConfig.WORLD_HEIGHT - scoreText.getHeight() - 5);
+        gameOverGroup.addActor(gameOverImage);
+        gameOverImage.setPosition(
+                GameConfig.WORLD_WIDTH / 2 - gameOverImage.getWidth() / 2,
+                GameConfig.WORLD_HEIGHT / 2);
+        gameOverGroup.setVisible(false);
     }
 
     private void clearScreen() {
@@ -249,12 +280,14 @@ public class GameScreen extends ScreenAdapter {
     private void gameOver() {
         state = GAME_STATE.GAME_OVER;
         updateFlowerMoveSpeed(0);
+        gameOverGroup.setVisible(true);
         flappee.die();
     }
 
     private void restart() {
         flowers.clear();
         flowerGroup.clearChildren();
+        gameOverGroup.setVisible(false);
         score = 0;
         state = GAME_STATE.RESTARTING;
     }
