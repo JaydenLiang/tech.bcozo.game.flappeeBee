@@ -8,4 +8,5 @@
 	<entry-point class='tech.bcozo.game.flappeebee.client.HtmlLauncher' />
 	
 	<set-configuration-property name="gdx.assetpath" value="../core/assets" />
+	<set-configuration-property name="gdx.assetfilterclass" value="tech.bcozo.game.assetfilter.AssetFilter" />
 </module>
