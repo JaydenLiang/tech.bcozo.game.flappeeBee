@@ -1,12 +1,15 @@
 package tech.bcozo.game.tools.console;
 
-public class Controller {
-    public static final int RIGHT = 1;
-    public static final int LEFT = 3;
-    public static final int UP = 0;
-    public static final int DOWN = 2;
+public enum Controller {
+    UP(1), UPRIGHT(2), RIGHT(4), DOWNRIGHT(8), DOWN(16), DOWNLEFT(32), LEFT(64),
+    UPLEFT(128);
+    private int value;
 
-    public Controller() {
+    private Controller(int value) {
+        this.value = value;
     }
 
+    public int getValue() {
+        return value;
+    }
 }

@@ -29,6 +29,8 @@ public class DigitDisplay extends Actor implements Disposable {
     // private NumberFormat formatter;
     private int minIntegerDigits;
     private int maxIntegerDigits;
+    private int textMarginX;
+    private int textMarginY;
 
     /**
      * <p>
@@ -48,6 +50,8 @@ public class DigitDisplay extends Actor implements Disposable {
         // formatter = NumberFormat.getDecimalFormat();
         minIntegerDigits = 0;
         maxIntegerDigits = 0;
+        textMarginX = 0;
+        textMarginY = 0;
         createTextureRegions(regions);
     }
 
@@ -167,7 +171,7 @@ public class DigitDisplay extends Actor implements Disposable {
                 index = Integer.parseInt(string.substring(i, i + 1));
                 numbers[i] = digits[index];
             }
-            width += numbers[i].getRegionWidth();
+            width += numbers[i].getRegionWidth() + textMarginX;
         }
         setWidth(width);
     }
@@ -230,7 +234,7 @@ public class DigitDisplay extends Actor implements Disposable {
             int drawX = 0;
             for (int i = 0; i < numbers.length; i++) {
                 batch.draw(numbers[i], getX() + drawX, getY());
-                drawX += numbers[i].getRegionWidth();
+                drawX += numbers[i].getRegionWidth() + textMarginX;
             }
         }
         super.draw(batch, parentAlpha);
@@ -250,4 +254,25 @@ public class DigitDisplay extends Actor implements Disposable {
         digitTexture.dispose();
         digitTexture = null;
     }
+
+    public int getTextMarginX() {
+        return textMarginX;
+    }
+
+    public void setTextMarginX(int marginX) {
+        textMarginX = marginX;
+    }
+    //
+    // public int getTextMarginY() {
+    // return textMarginY;
+    // }
+    //
+    // public void setTextMarginY(int textMarginY) {
+    // this.textMarginY = textMarginY;
+    // }
+    //
+    // public void setTextMargin(int marginX, int marginY) {
+    // setTextMarginX(marginX);
+    // setTextMarginY(marginY);
+    // }
 }
